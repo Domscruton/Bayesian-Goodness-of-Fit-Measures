@@ -1,0 +1,683 @@
+---
+title: "Bayesian Goodness of Fit Measures"
+author: "Dominic Scruton"
+date: "28 November 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+I confirm that the following report and associated code is my own work, except where clearly indicated
+
+This paper considers Bayesian Goodness-of-fit measures to assess the fit of two example models to the given data. Firstly, a comparison between the Classical and Bayesian goodness-of-fit perspectives is given. In particular, Bayesian p-values require the use of test-quantities to assess the properties of a distribution and such test quantities depend on both the data and the estimated model parameters. Two common measures of goodness-of-fit in the Bayesian paradigm are then considered; Prior p-values and Posterior p-values. Both measures can be used to assess how appropriate prior assumptions about model parameters are in comparison to the true data. Two examples are discussed, firstly with conjugate priors and secondly using Gibbs Sampling.  
+
+Different test quantities are considered to assess the fit of each model, including minimum and maximum values, the mean-variance relationship and symmetry of the prior and posterior predictive distributions in comparison to the true data. For data simulated from the exponential distribution, we find that the fit of the model is highly sensitive to the choice of prior. For priors that are less reflective of the true data, the p-value for the mean-variance relationship and maximum value tests are 0.010 and 0.021, respectively. This would suggest that the prior predictive distribution does not fit the data very well. However, the posterior p-values of 0.343 and 0.287 illustrate the effect that the data has in ensuring that the posterior predictive distribution is far more representative of the true data-generating process. This would make posterior p-values seem a more appropriate measure of model fit. Secondly, we assume that data for the speed of light (Gelman et al., 1995, pp70) is normally distributed. We see that a test quantity to assess symmetry in the predictive distributions suggests a strong model fit for the data, with prior and posterior p-values of 0.407 and 0.457 respectively. However, maximum and minimum test quantities instead conclude that the posterior model does not provide a good fit to the data.
+
+Within the literature, Posterior p-values are considered the more appropriate goodness-of-fit measure because they consider the final model which is influenced by both the data and prior assumptions. Meanwhile, prior p-values are only based on the prior information that we have but may instead indicate when assumptions about the distribution of the underlying data are clearly wrong, as seen in the second illustration of this paper.
+
+## 1 Introduction
+
+“All models are wrong, but some are useful” (George Box)
+
+This paper discusses several different Bayesian Goodness-of-Fit measures used to assess the appropriateness of a given model. Whilst many models can be useful in simplifying real-world concepts, some models might not be useful, either because they are a poor representation of the true data (they fit the data poorly) or because the failure of model assumptions may lead to poor inference. We therefore need to think carefully and evaluate whether data are consistent with our models, otherwise this may lead to inconsistent and biased inference (Link et al., 2011, pp104). 
+
+To do this, prior and posterior Bayesian p-values can be used to assess the goodness of fit in a model. In a similar way to classical statistics, these p-values considered the probability of seeing test statistics as or more as extreme as the observed values. However, firstly, test ‘quantities’ under the Bayesian approach are used to assess whether the distribution of the true data has the same characteristics as data predicted under the model. Therefore, relevant test quantities must be deciphered to assess model fit. Furthermore, unlike Classical test statistics which only depend on the data, Bayesian test quantities can be functions of the unknown parameters as well as the data because each test quantity is evaluated over the posterior or prior predictive distributions, which are themselves weighted by the prior and posterior probability distribution of the parameters (Gelman et al., 1995, pp 169). 
+
+Two examples are used to assess both the choosing of appropriate test quantities and the implementation of Bayesian goodness-of-fit tests. We find that p-values may be heavily affected by the choice of prior and assumptions made about the distribution of the true data-generating process. However, as the sample size increases, prior knowledge on the parameters will be less influential in fitting the true model which will become more likelihood dependent. Therefore, despite having prior distributions that are very misrepresentative of the data, the posterior predictive distribution may more closely fit the true data.
+	
+## 2 Goodness-of-Fit Measures
+
+Goodness-of-fit tests provide an overall measure of the fit of a model, given that probability distributions will not be able to capture the true process. In theory, one could consider a vast range of prior distributions and compute corresponding posterior distributions to understanding the sensitivity of the model to such changes. However, setting up such a model may be computationally infeasible. Instead, goodness-of-fit measures allow us to examine how models fail to fit reality.
+
+### 2.1 Goodness-of-Fit in Classical Regression
+
+Within classical statistics, a variety of methods are used to assess the fit of a model to the data. These include K-S tests to compare a sample to a reference probability distribution, the Shapiro-Wilk test for normality and R-squared to assess the fit of a linear regression model (Kutner et al., 2013, pp 115). The first two tests involve comparing the distribution of the test-statistic under the null with the observed value of the test statistic and finding the probability of seeing a test statistic as or more extreme than the observed one. 
+In classical statistics, model parameters are estimated using only information contained within the data; no prior information is taken into consideration. Furthermore, once we have estimated model parameters, θ= θ_0, they are treated as fixed constants. To test the fit of such a model, we claim a distribution for the data, 〖f(X ┤|θ〗_0) and then evaluate whether the observed data are consistent with the hypothesized model using p-values (Christensen et al, 2011, p53). A p-value is the probability of seeing data as extreme or more extreme than the actual data. In this case, a p-value of, say 0.02, would indicate that under H_0 (The model provides a good fit to the data), there is a 2% chance of seeing a test statistic at least as extreme as the observed test statistic (that is, Pra(Model is true (H_0 )  ┤| data)=0.02). The classical p-value for some test statistic is given as:
+Equation 1- Classical p-value
+p_C=Pra(T(X^rep )≥T(X ┤|θ)
+
+Unlike classical tests, Bayesian tests average over the (prior or posterior) predictive distributions of the unknown parameter vector rather than fixing it at some value, θ_0 (Gelman et al., 1995, pp 174). The standard Bayesian Approach for goodness-of-fit is to compare some test quantity of the observed data against the test quantity for predicted (replicated) data generated under the model (Nott et al., 2013, pp59). The term ‘test quantity’ relates to the idea that Bayesian test quantities depend on both the data and the parameters, as the parameters in any Bayesian model have some distribution and can be treated as random variables. The most common approaches are to use the prior predictive distribution or the posterior predictive distribution to generate replicated data and from such replicates, calculate the p-values for a given test quantity when comparing the value of that test quantity between samples taken from the predictive distribution for the data and the true, observed data. 
+
+A small p-value would indicate a model’s fit does not closely match the distribution of the data, because the test quantity applied to the observed data lies far into the tails of the distribution of the test quantity applied to samples of the predictive distribution. However, posterior Bayesian p-values are actual posterior probabilities and can’t be interpreted directly. P-values of 0.0001 and 0.001 have no interpretable difference apart from that they both suggest a poor-fitting model. Instead, a model that does not fit the data will have p-values close to zero or 1 . Unlike classical statistics, we are not necessarily interested in whether the data come from the assumed model, but instead we quantify discrepancies between the data and the model and assess whether they could have arisen by chance, under the model’s own assumptions (Gelman et al., 1995, pp 173). Bayesian posterior predictive checks are therefore generalizations of classical tests, because they don’t rely on careful construction of test statistics or on asymptotic results, so can be applied to any probability model (Gelman et al., 1995, pp 174). Bayesian p-values provide a more general methods of measuring differences between observed and predicted data (Lee, 2013, pp147).
+
+## 2.2 Prior Bayesian p-values
+
+Prior Bayesian p-values allow us to assess the conclusions of the model when the distribution for the model parameters is given by their prior distribution. Prior Bayesian p-values are only based on the prior information, and they allow us to check how close the model is, using only prior knowledge, to the data. We use the prior distribution for the parameters θ to derive predictions, also known as replicates, for the data. Bayesian models can be highly dependent on the choice of prior; if the prior is strongly inappropriate, the posterior distribution for the parameters, θ, is likely to be prior-dominated and hence the model will be a poor fit for the true data. 
+
+#### 2.2.1 Prior Predictive Distribution
+
+We can use the prior predictive distribution to simulate data under the fitted model and then compare predictions against the true observations to assess the goodness-of-fit of the model. The prior predictive distribution is given by:
+Equation 2- Prior Predictive Distribution
+p(X ̂ )= ∫▒p(X ̂  ┤|   θ) p(θ)  dθ
+This represents the expected pdf of the predictions with respect to the prior density, p(θ) (Papathomas et al., 2019, pp24). The pdf is weighted by the values of  θ; those values of θ with a greater density will contribute more predicted values to the prior predictive distribution, Since no data has yet been observed, our best guess for the values of θ is therefore based on our prior knowledge. Therefore, prior predictive p-values allow us to characterize differences in prior information and the true data. The prior predictive distribution is sometimes called the pre-posterior distribution because the data is not used to fit the model; only prior knowledge is used and then p-values compare the fit of this ‘prior model’ to the data (Lee, 1997, pp36).
+
+2.2.2 Prior Predictive Checking
+For a given test quantity, we calculate prior Bayesian p-values as:
+
+Equation 3- Prior Bayesian p-values
+p_B=Pra(T(X ̂,θ)≥T(X,θ ┤|θ)
+Given a prior predictive distribution, simulated using Equation 2, we assess the fit of the model by comparing the predicted test quantities from the replicated data (T(X ̂,θ)) under samples from the prior predictive distribution with the observed test quantities (T(X,θ))  from the true data. The empirical p-value is then the proportion of prior predictive test quantities that are at least as extreme as the test quantities of the true data. A model is suspect if its p-values for a relevant test quantity are close to zero or one. In this case, the test statistic for the prior predictive distribution is very different to that for the observed data.
+	2.2.3 Prior Predictive Algorithm
+To calculate the prior predictive distribution, we simply draw values of the vector θ from the prior distribution. For each value of θ, we simulate one replicate under the assumed distribution for the data and do this, say 100 times to create a sample from the prior predictive distribution. No data is used; only prior information. Repeating this process and calculating test quantities for each sample from the prior predictive distribution will give a distribution of the test quantity under our prior knowledge. From this, the value of the test quantity for the observed data can be compared with the distribution of test quantities under the prior model to find the prior Bayesian p-value:
+
+	Use the prior distribution to calculate values for the model parameters, θ. 
+	For J in 1:1000:
+	For I in 1:N:
+	Simulate a parameter value/ vector, θ, from the prior distribution.
+	Use each simulated vector θ to generate one replicate of the data using the assumed data distribution.
+	Doing this many times creates a prior predictive distribution. Given this distribution, test quantities are calculated for each of the 1000 prior predictive samples from (a).
+	P-values for each test quantity considered are calculated as the proportion of test quantities from samples of the prior predictive distribution that are as least as extreme as the test quantity for the observed data.
+
+2.3 Posterior Bayesian p-values
+A more common method of assessing goodness-of-fit is posterior predictive checking. Posterior predictive checking checks a Bayesian model by comparing posterior predictions with the true observed data (Gelman et al., 1995). If there are systematic differences between the simulated values and the true data, then we would conclude that the model fits the true data poorly. To carry this out, we simulate parameters from the posterior distribution, fit the model given these parameters and use this model to make predictions for the data. In particular, if the posterior predictive distribution fitted the model well, but the prior predictive distribution did not, we would say that we have a prior that does not accurately represent the data-generating process for the observed data.
+
+#### 2.3.1 Posterior Predictive Distribution
+
+The posterior predictive distribution is used to derive Bayesian p-values, by generating replicates of the data under the fitted model. 
+
+Assumptions
+Suppose that the we model the existing data, X, as if they have been sampled from some distribution,  p(X ┤|  θ). For example, we may assume X has come from a normal distribution with parameters μ and σ (X ~ N(μ,σ^2 )). To predict new data, we assume that X^rep is a replicate of X, that is, it has the same distribution and parameters as X. We also assume that given the same parameters θ, X and X^rep are independent (i.e. they are independent draws from the same distribution) (Link et al., 2010, pp80).
+
+Derivation
+By Bayes theorem, we have that:
+
+p(θ,X^rep  ├| X)  ∝p(X ┤|  θ,X^rep )  p(θ,X^rep)
+
+Since X and X^rep are independent draws from the same distribution, the probability distribution of X will not depend on X^rep (p(X ┤|  θ,X^rep)= p(X ┤|  θ)). Furthermore, by factorization, p(θ,X^rep )=p(X^rep  ┤|  θ) p(θ). Therefore, we have that:
+
+p(θ,X^rep  ├| X)  ∝p(X ┤|  θ)  p(X^rep  ┤|  θ) p(θ)
+
+However, the first and third term of the right-hand side of this equation is just the posterior distribution for θ (p(θ ┤|  X) ∝ p(X ┤|  θ) p(θ)). That is, we have:
+
+p(θ,X^rep  ┤|  X) ∝ p(X^rep  ┤|  θ) p(θ | X)
+
+To find the posterior predictive distribution of X^rep given X, we then marginalize the distribution by integrating over θ.
+
+Equation 4- Posterior Predictive Distribution
+p(X^rep  ┤|X)= ∫▒〖p(〗X^rep| θ)p(θ|X) dθ
+
+Where p(θ|X) is the posterior distribution for θ. This integral illustrates that the posterior predictive distribution is therefore just the average of the data distribution for (X^rep  | θ), weighted by the posterior probability density for θ (Link et al., 2010, pp80). These are the updated beliefs about our best guess of the true parameters of θ. Therefore, if we were to use a MCMC simulation approach to generate a posterior predictive distribution for X^rep, we would need to calculate the distribution of X^rep for each different θ generated from the posterior distribution and average the distributions. Those distributions that correspond to higher values of θ will therefore have a greater impact in generating the posterior predictive distribution because such distributions will be more likely to be simulated. 
+
+2.3.2 Posterior Predictive Checking
+The Bayesian posterior p-value is defined as the probability that the replicated data is more extreme than the observed data as measured by the test quantity.
+
+Equation 5- Posterior Bayesian p-value
+p_B=Pra(T(X^rep,θ)≥T(X,θ ┤|θ)
+
+To carry out this procedure, we calculate the test quantity under the observed data, then draw replicate data sets, X^rep, from the posterior predictive distribution and evaluate the test quantity applied to these replicated values. Given the posterior predictive distribution, we assess the fit of the model by comparing the predicted test quantities from the replicated data (T(X^rep,θ)) with the observed test quantity (T(X,θ))  from the true data. The empirical p-value is then the proportion of test quantities under the replicated data that are as or more extreme than the test quantity for the true data, as seen in Equation 5. A model is suspect if p-values for a given test quantity is close to zero or one. In this case, we would see that some property of the underlying distribution of the model, as measured by the test quantity, is different to that under the true data.
+2.3.3 Posterior Predictive Algorithm
+To calculate the posterior predictive distribution, we draw values of the vector θ from the posterior distribution. For each value of θ, we simulate one replicate under the assumed distribution for the data and do this, say 100 times to create a sample from the posterior predictive distribution. Repeating this process and calculating test quantities for each sample from the posterior predictive distribution will give a distribution of the test quantity under our fitted model. From this, the value of the test quantity for the observed data can be compared with the distribution of test quantities under the fitted posterior model to find the posterior Bayesian p-value.
+
+When the prior is conjugate for the likelihood of the data, the posterior distribution can be directly calculated. When the posterior distribution is of non-standard form, simulation methods such as Monte Carlo Markov Chain (MCMC) are instead used to calculate the posterior predictive distribution. 
+
+In order to calculate posterior p-values, we consider implementing the following algorithms:
+
+	Conjugate Priors
+
+	Use the posterior conjugate distribution to calculate posterior values for the model parameters, θ. 
+	For J in 1:1000:
+	For I in 1:N:
+	Simulate a parameter value, θ, from the posterior conjugate distribution.
+	Use each simulated vector θ to generate one replicate of the data using the assumed data distribution.
+	Doing this many times creates a posterior predictive distribution. Given this distribution, test quantities are calculated for each of the 1000 posterior predictive samples from (a).
+	P-values for each test quantity considered are calculated as the proportion of test quantities from samples of the posterior predictive distribution that are as least as extreme as the test quantity for the observed data.
+
+
+	MCMC Sampling (when the posterior distribution is of non-standard form)
+
+	Use MCMC sampling to simulate a posterior distribution to calculate posterior values for the model parameters, θ. Discard the number of iterations required for model ‘burn-in’ (Number of iterations until the parameters converge to a approximately stationary distribution).
+	For J in 1:1000:
+	For I in 1:N:
+	Simulate a parameter value, θ, from the posterior distribution.
+	Use each simulated vector θ to generate one replicate of the data using the assumed data distribution.
+	Doing this many times creates a posterior predictive distribution. Given this distribution, test quantities are calculated for each of the 1000 prior predictive samples from (a).
+	P-values for each test quantity considered are calculated as the proportion of test quantities from samples of the posterior predictive distribution that are as least as extreme as the test quantity for the observed data (p_B=Pra(T(X^rep,θ)≥T(X,θ ┤|θ)).
+
+
+2.4 Test Quantities
+To understand how well the distribution of predicted data fits the distribution of the observed data, we use test quantities to quantify the relative magnitude of differences between the original data and fitted model. In classical statistics, test statistics (T(x)) only depend on the data, whereas test quantities (T(X^rep,θ) or T(X ̂,θ)) in the Bayesian paradigm depend both on the predicted data and model parameters under their posterior (or prior) distribution. This is because the test quantity is evaluated for replicated data that is drawn from a posterior predictive distribution with varying model parameters (as the parameters have a distribution). 
+
+Both prior and posterior Bayesian p-values can be derived from a variety of different tests that assess the goodness-of-fit of the replicated data under the fitted model with the true observations. Suitable test quantities ensure comparison between the distributional shape of the observed data and the posterior predictive data and should be specific to the underlying distributions upon which we would like to infer. Furthermore, we could calculate p-values for a variety of test quantities in order to evaluate more than one possible model failure (Gelman et al., 1995). 
+
+For example, normally distributed data will be symmetric, so we may wish to compare the ‘level of symmetry’ between the observed data. We therefore use the following test quantity that is sensitive to asymmetry in the distribution (Gelman, 1995, pp 172). 
+Equation 6- Symmetric Test quantity
+T(X^rep,θ)= |〖X^rep〗_((5% quantile))- θ|- |〖X^rep〗_((95% quantile))- θ|
+
+Where θ is the mean of the replicated distribution (or the mean of the original data). The test statistic in Equation 6 compares whether the magnitude in differences between symmetric quantiles is the same. A value of zero for the test quantity in this case would indicate perfect symmetry, while increasing positive or negative values indicate greater skew in an absolute sense. We would then calculate the test statistic in Equation 6 for both the true data and the data from the prior or predictive distributions and calculated p-values in the manner discussed in sections 2.2.3 and 2.3.3.
+
+Other test quantities could include:
+	the maximum and minimum values of the observed data and prior/posterior distributions to assess whether the tails of the fitted model resemble those of the true data.
+	The mean-variance relationship to see if this is the same for exponential or poison distributed data.
+
+
+
+
+
+
+ 
+3 Methodology 
+To illustrate some of the concepts discussed in a more concrete manner, we consider two simple examples in which we attempt to fit Bayesian models to the data. Firstly, we fit an exponential model to some exponentially simulated laptop data and firstly the impact of the prior on each type of p-value and the relative differences between the two p-values. This approach considers a simple conjugate analysis approach to calculating the posterior predictive distribution. Secondly, we use Newcomb’s speed of light data (Gelman et al., 1995, pp70) to assess the goodness-of-fit of a normal distribution to the data using both prior and posterior predictive distributions. This considers a more realistic Gibbs sampler in R.
+
+3.1 Simulated Laptop Data
+Consider that the lifetime of a laptop has an independent exponential distribution, that is, X_i  ~ expa(λ) (Papathomas et al., 2019, pp6). Consider the following gamma prior for λ: 
+
+λ ~ Γ(α,β)
+
+It turns out that given the distribution of the data, this prior is a conjugate prior, that is, the posterior is of the same distributional form as the prior. We get that the posterior for λ is of the form:
+
+π(λ ┤|  x) ~ Γ(α +n,β +nx ̅)
+
+3.1.1 Predictive Distributions for Laptop Data
+To generate the posterior predictive distribution for this model, we would simply randomly simulate values of λ, λ_post from its posterior distribution and for each simulated value of λ, simulate a replicate laptop time, from expa(λ_post). This process is repeated to generate a posterior predictive distribution for the data in the model. To calculate the prior predictive distribution, we just simulate parameter values from the prior distribution and use these to generate replicates that form the prior predictive distribution.
+
+3.1.2 Relevant Test Quantities for an Exponential Distribution
+To consider the fit of this Bayesian model, we would like to use test quantities directly related to the exponential distribution, in terms of its properties. In particular, the exponential distribution assumes that the mean-variance relationship increases with the mean  (Link et al., 2010, pp105). In other words, the mean-variance relationship should equal the mean. If this is not the case, then the fitted Bayesian model may not be a good summary of the data (if the data is in fact not exponentially distributed or uninformative priors have too much influence on the posterior distribution). 
+
+Equation 7- Mean-Variance Test Quantity
+T(X^rep,θ)=(mean(X^rep))/(Var(X^rep))
+
+Another relevant test quantity that could be used is the maximum value of each distribution. This again allows us to compare whether our assumption of an exponential model is appropriate and also whether the parameters in the fitted model give a good reflection of the true data. If samples from the posterior predictive distribution have maximum replicate values much greater than for the true data, then either the estimated mean lifetime is too high or the true data is not exponentially distributed as it has much shorter tails.
+To ensure that results are not biased, the test quantity for the maximum values must be calculated over sample from the predictive distributions that are the same size as the sample of the original data. 
+
+Equation 8- Maximum Test Quantity
+T(X^rep,θ)=maxa(X^rep) 
+
+Again, both test quantities are calculated for the observed data and compared with test quantities calculate from samples of the same size from the predictive distributions.
+
+3.2 Non-tractable Speed of Light Data
+Consider Newcomb’s speed of light data (Gelman et al., 1995, pp 70), consisting of 66 measurements of the speed of light, recorded as deviations form 24,800 nanoseconds (see Figure 1). Suppose that we would like to fit a model to the data and, in particular, we assume that the data are normally distributed (X_i  ~ Na(μ,σ^2)). We then consider the following prior distributions for the normal parameters:
+μ ~ N(ϕ,τ^2) and σ^2~Γ^(-1) (α,β)
+
+Given the prior and likelihood function, the posterior is analytically intractable, so we use the Gibbs Sampler to derive the posterior predictive distribution and hence calculate prior and posterior Bayesian p-values for some test quantities that are relevant to the underlying distribution of the data. 
+
+Figure 1- Histogram of the Speed of Light Data
+ 
+
+3.2.1 Predictive Distributions for Speed of Light Data
+To calculate the prior predictive distribution for the speed of light data, we do not need the Gibbs sampler, because we can merely simulate parameter values, θ, from their assumed prior distributions. We then use these simulated values to generate a prior predictive distribution that can be sampled from and used to calculate test quantities and associated p-values (appendix B).
+
+The process of calculating the posterior predictive distribution is, however, much harder. Because the posterior distribution for the data is of non-standard form, the Gibbs sampler is used to create a posterior distribution from which a posterior predictive distribution can be created (Papathomas et al., 2019, pp49). We calculate posterior samples for the parameters, θ, using the following Gibbs sampler:
+Equation 9- Speed of Light Gibbs Sampler (Papathomas et al., 2019, pp49.
+μ^(t+1)  | x,(σ^2 )^t  ~ N((τ^2 nx ̅+ 〖〖(σ〗^2)〗^t ϕ)/(τ^2 n+ 〖〖(σ〗^2)〗^t ),(〖〖(σ〗^2)〗^t τ^2)/(τ^2 n+ 〖〖(σ〗^2)〗^t ))
+〖(σ^2)〗^(t+1)  | x,μ^(t+1)  ~ Γ^(-1) (n/2+ α,1/2 ∑_(i=1)^n▒〖(x_i- μ^(t+1) )^2+ β〗)
+Therefore, to start the Gibbs sampler, we initialize starting values for the two parameters of μ=20 and σ^2=2, based on prior assumptions about the distribution of the speed of light. A similar approach could be taken using OpenBUGS to calculate the posterior distribution for the parameters 
+
+3.2.2 Relevant Test Quantities for a Normal Distribution
+We consider two test quantities to assess whether the fitted model is an adequate representation of the data. Given that we have assumed that the data is normal, we would like test quantities relevant to such a distribution. Firstly, we compare how the tails of the replicated data differ from the tails of the true data. To do this, we consider the test quantities:
+
+T(X^rep,θ)=mina(X^rep)
+
+T(X^rep,θ)=maxa(X^rep)
+
+We calculate these test quantities for each sample from the predictive distributions and for the observed data. Secondly, we would also like to assess whether there is symmetry in the centre of the distribution. Symmetry about the mean is a key property of normally distributed data The symmetric test quantity in Equation 6 is therefore used to assess whether there are differences in the symmetry of the observed and replicated data. If the prior or particularly posterior p-values are close to zero or one, then this would suggest that the data does not come from a symmetric distribution. 
+
+
+
+
+
+
+
+
+
+4 Results
+P-values for the relevant test quantities of each of the two examples given in the previous section indicate two clear points:
+	The fit of the posterior model is dependent on the prior parameters chosen. Hence, if prior parameters do not represent the observed data, the model will have poor fit. However, as the sample size increases, the posterior distribution and hence the posterior predictive distribution and estimated model becomes more likelihood dominated and therefore tends to resemble more closely the true data. Therefore, posterior p-values may be more appropriate in assessing model fit because they consider the fit of the estimated model.
+	When the assumed distribution of the data is not appropriate, prior p-values may indicate a strong model fit, whilst posterior p-values indicate a poor fit because the final model has been strongly influenced by outliers. In this case, prior p-values may be useful in suggesting ways in which the model could be improved (Gelman et al., 1995, pp 173).
+
+Therefore, whilst the posterior p-value may be favoured to the prior p-value because it assesses the fit of the model that is actually estimated and not just the appropriateness of the prior, both p-values can be used in complementary ways to assess both the fit of the model and assumptions made about the distribution of the observed data.
+
+4.1 Exponential Laptop Data Results 
+Table 1 and Table 2 show the results of the prior and posterior p-values for the mean-variance test quantity and the maximum value test quantity. The simulated data are generated from an exponential distribution with λ=0.2. For the first set of prior parameters (alpha = 2, beta = 5), the prior p-value is very small, indicating a poor fit of the prior assumptions to the true data. This is because the mean of the rate parameter, λ, under prior knowledge is 0.4 (2/5), whilst for the true simulated data it is 0.2. Figure 4 illustrates how the prior predictive distribution does not fit the data very well. However, the posterior p-value of 0.343 for the constant mean-variance test quantity shows that the actual model fits the data well, as measured by this test quantity.
+ 
+The fitted model is plotted by simulating values from the posterior predictive distribution (or prior predictive distribution for prior p-values). We can then visually compare who close the distribution of the observed data and the predicted values are to assess if the model appears to fit the data well. This is seen in Figure 2, where the posterior predictive density for the fitted model closely resembles that of the true data. In Table 2 we also see that the posterior p-value is not close to zero, indicating a good fit of the final model to the data, unlike that of the prior p-value when assessing prior assumptions.
+Table 1- Prior and Posterior Bayesian p-values for the Constant Mean-Variance Test Quantity
+Prior Parameters	Prior Mean	Prior p-value	Posterior p-value
+Alpha = 2, Beta = 5	0.4	0.010	0.343
+Alpha = 20, Beta = 100	0.2	0.141	0.312
+
+Table 2- Prior and Posterior p-values for the Maximum Value Test
+Prior Parameters	Prior Mean	Prior p-value	Posterior p-value
+Alpha = 2, Beta = 5	0.4	0.021	0.287
+Alpha = 20, Beta = 100	0.2	0.118	0.280
+
+When prior assumptions give a mean rate for the parameter λ that is identical to that of the true data (when alpha = 20 and beta = 100), both the prior and posterior p-values, for both test quantities indicate a good fit of the model to the data. Again, this is also seen in Figure 3 and Figure 5, with the posterior predictive distribution and prior predictive distribution (respectively) closely resembling the true distribution of the data.
+
+Figure 2- Density of Posterior Predictive Distribution for Alpha=2, Beta=5
+ 
+Figure 3- Density of Posterior Predictive Distribution for Alpha=20 and Beta=100
+ 
+Figure 4- Density of Prior Predictive Distribution for Alpha=2 and Beta=5
+ 
+Figure 5- Density of Prior Predictive Distribution for Alpha=20, Beta=100
+ 
+Given that posterior p-values for both test quantities indicate a strong resemblance between the fitted model and the true data, this suggests that the fitted model provides a good fit to the data.
+
+4.2 Normal Speed of Light Results
+To carry out the Gibbs Sampler (Equation 9), we consider prior parameter values of ϕ=25,τ^2=2,α=3,β=50. A burn-in of 1000 samples is used to ensure that the Gibbs Sampler has converged to a stationary distribution (this is a very conservative burn-in level). That is, the first 1000 iterations are ignored on the basis that such a Markov chain may not yet have converged to its stationary distribution. We then draw samples of size 66 (the same as the sample size of the observed data), starting at initial value of μ=20,σ^2=2. One could also assess the Gibbs sampler for several starting points to ensure that the sampler does not converge to a sub-optimal distribution. However, given the trace plots in Figure 6 and Figure 7 and the plot of the data in Figure 1, it is clear that the Gibbs sampler has converged appropriately to the correct mean and variance.
+
+Figure 6- Trace Plot for the Posterior Mean
+ 
+Figure 7- Trace Plot for the Posterior Variance
+ 
+The results in table 3 indicate that there is clear deviation between the minimum value for the observed data and the minimum value for the fitted model using the prior and posterior predictive distributions. This is because of the outlier in the speed of light data (see Figure 1), which is much lower than the other variables. This can be seen in Figure 8 and Figure 12. The histogram shows the distribution of observed test quantities for the fitted model, whilst the vertical line shows the minimum test quantity for the observed data, which is far below that of any of the test quantity values for the replicated samples.
+Table 3- Prior and Posterior p-values for the Minimum, Maximum and Symmetry Test Quantities
+Test Quantity	Observed Test Quantity	Prior p-value	Posterior p-value
+Minimum	-44.00	0.000	0.000
+Maximum	40.00	0.658	0.001
+Symmetry	-0.3258	0.407	0.457
+On the other hand, the prior p-value for the maximum test quantity in Table 3 indicates that prior assumptions about the distribution of the data may have been appropriate under this test quantity. We see in Figure 13 that the observed test quantity lies comfortably inside the distribution of test quantities under the prior predictive distribution, as represented by a p-value of 0.658. However, due to the outliers in the model, the variance of the posterior distribution is increased, ensuring that maximum test quantities for the fitted model are almost always greater than that of the observed data (Figure 9).
+Finally, the symmetric test quantity (Equation 6) shows that the model fits well to the data. That is, when we look at the middle 90% of the distribution of the observed data, it does look symmetric, as assumed by the fitted model. This is seen in the 0.407 ad 0.457 p-values in Table 3 and the distribution of this test quantity for the prior and predictive distribution, in comparison to the observed test quantity, as seen in Figure 10 and Figure 14.
+
+Posterior Predicted Test Quantities and the Observed Test Quantity
+Figure 8- Minimum Test Quantities for the Posterior Predictive Distribution and Observed Data
+ 
+
+Figure 9- Maximum Test Quantities for the Posterior Predictive Distribution and Observed Data
+ 
+Figure 10- Symmetry Test Quantities for the Posterior Predictive Distribution and Observed Data
+ 
+Fitted Posterior Speed of Light Normal Model
+Figure 11- Histogram of Observed Data and Density of the Posterior Predictive Distribution
+ 
+Prior Predictive Test Quantities and the Observed Test Quantity
+
+Figure 12- Minimum Test Quantities for the Prior Predictive Distribution and Observed Data
+ 
+Figure 13- Maximum Test Quantities for the Prior Predictive Distribution and Observed Data
+ 
+Figure 14- Symmetric Test Quantities for the Prior Predictive Distribution and Observed Data
+
+ 
+Speed of Light Prior Model
+Figure 15- Histogram of the Observed Data and Density of the Prior Predictive Distribution
+ 
+In particular, we see that the prior chosen has similar properties to the underlying data, however unlike the posterior distribution, it has a smaller variance, as prior beliefs have not been influenced by the two outliers in the data, hence the prior p-value for the maximum test quantity suggests the model using prior information fits the model very well. In this case, we may prefer the prior p-value, because it ignores the outliers and hence gives a better-fitting model to the non-outlying data. Overall, given that p-values for the maximum and minimum test quantities in particular suggests a poor fit, it is clear that the normal distribution is not a good model of the data. However, given the strong fit under the symmetric test quantity and under the maximum test quantity for the prior Bayesian p-value, a normal model may be appropriate if the two outlying observations from the original speed of light data are ignored. Figure 11 and Figure 15 show the posterior and prior predictive distributions fitted against the observed data. Again, the prior fit appears to be much better if we ignore outliers. 
+
+Interestingly, for these given test quantities, we see that they disagree as to whether the fit of the model is appropriate. Hence, such a model may be inadequate for some purposes but adequate for others (Gelman et al., 2019, pp 172). Here we see that the normal model is adequate (as seen by the symmetric test quantity p-values) except for the tails in its distribution. 
+ 
+5 Discussion
+We have seen that the posterior predictive distribution is a powerful tool in assessing the goodness-of-fit for Bayesian models. In particular, “draws from it represent our best attempt to generate data according to the model for X, properly accounting for the uncertainty due to imperfect knowledge regarding the parameters θ” (Link et al., 2010, pp 81). In general, when assessing goodness-of-fit for Bayesian models, posterior p-values are far more widely used, because they assess the fit of the final model, using the posterior distribution of the parameters, θ, to generate replicated data. They also enable Bayesian statisticians to assess the sensitivity of the Bayesian model with respect to different prior distributions. 
+
+For example, in the laptops example, the fitted model was not sensitive to the different prior distributions as assessed by both the mean-variance ratio and the maximum test quantities. In this case, the likelihood dominated the posterior and p-values indicated a good model fit, both when prior parameters were very close to the true model and when they were somewhat different. 
+
+However, prior Bayesian p-values can be used to assess either how informative or accurate the prior distribution for θ is, when compared with the likelihood function for θ given the observed data, X and consider the sensitivity of the model to the prior distribution (Gelman et al., 1995).
+If the prior p-values are small, the posterior for θ may be dominated by prior assumptions that do not accurately reflect the observed data, especially for low sample sizes. 
+
+The calculation of p-values is very flexible, with a large range of different tests available that examine the distributional similarity of the posterior predictive distribution and the distribution of the data. Therefore, Bayesian p-values are more flexible generalizations of their Classical counterparts and allow one to assess the distributional differences in the data and the fitted model using several test quantities relevant to the assumed distribution of the data. Using a range of test quantities can also assess whether the fitted model is appropriate in some aspects but not in others. In the speed of light data, a normal distribution for the original data did not seem appropriate, but the implied assumption of symmetry around the mean for the 90% interquartile range was strongly supported by both prior and posterior p-values. 
+
+ 
+6 Conclusion
+In this paper, we have considered the two main types of Bayesian p-values; prior and posterior p-values. The literature has favoured posterior p-values, because they relate to the model that is actually fitted, whereas prior p-values only assess prior parameter distributions by estimating a hypothetical model using this prior knowledge. This paper has assessed that whilst posterior p-values may be more informative, both types of p-values can be used to effectively understand the goodness-of-fit of a Bayesian model. 
+
+In the examples illustrated, we have seen that the two types of p-value can be useful in different scenarios. For the simulated exponential laptop times, we saw that inappropriate priors need not have a strong effect on the fit of a model if they play little role in determining the posterior distribution. Conversely, if a Bayesian model is prior-dominated, and the prior is not appropriate then the model will be a poor fit. Hence, prior p-values can provide a straight-up measure of prior knowledge. For the normal speed of light data, we saw that different test quantities made different conclusions about whether the prior distribution and posterior distribution were accurate reflections for the true data. Whilst this may conclude that a normal distribution did not fit the data well, it also showed that such a distribution may still be relevant, and fit the data well if outlying observations were ignored.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bibliography
+Lee, P. (1997). Bayesian Statistics an Introduction. Oxford University Press, New York.
+Best, N., Jackson, C., Lunn, D., Spiegelhalter, D., Thomas, A. (2013). The BUGS Book: A Practical Introduction to Bayesian Analysis. CRC Press.
+Papathomas, M, Minas, G. (2019). MT5731- Advanced Bayesian Inference. [Lecture Notes] University of St Andrews.
+Gelman, A., Carlin, J., Stern, H., Rubin, D. (1995). Bayesian Data Analysis. Chapman & Hall, London.
+
+Kutner, M., Li, W., Nachtsheim, C., Neter, J. (2013). Applied Linear Statistical Models. McGraw Hill Education.
+Christensen, R., Johnson, W., Branscum, A., Hanson, T. (2011). Bayesian Ideas and Data Analysis. Chapman & Hall.
+
+O’Hara, R., Silanpaa, M. (2009). A Review of Bayesian Variable Selection Methods: What, How and Which. Bayesian Analysis, No. 1, pp85-118.
+
+Nott, D., Drovandi, C., Mengersen, K., Evans, M. (2018). Approximation of Bayesian Predictive P-Values with Regression ABC. Bayesian Analysis, No. 1, pp59-83.
+
+Link, W., Barker, R. (2010). Bayesian Inference with Ecological Applications. Elsevier, China.
+
+Sellke, T., Bayarri, M., Berger, J. (2001). Calibration of p Values for Testing Precise Null Hypotheses. The American Statistician, February 2001, Vol.55, No.1.
+
+M.J. Bayarri and J.O. Berger (1999). Quantifying Surprise in the data and model verification. Bayesian Statistics 6 (J.M. Bernardo, J.O. Berger, A.P. Dawid, A.F.M. Smith, eds.). Oxford: Clarendon Press, pp 53 – 83.
+
+O’Hagan, A., Buck, C., Daneshkhah, A., Eiser, J., Garthwaite, P., Jenkinson, D., Oakley, J., Rakow, T. (2006) Uncertain Judgements: Eliciting Experts’ Probabilities. Wiley.
+
+
+
+
+Appendix
+Appendix A- Laptop Lifetimes Conjugacy Example
+	Bayesian Posterior p-values
+	Maximum Test Quantity
+maxPost <- function(alpha, beta, data){
+  #Function to calculate the posterior predictive distribution
+  #Inputs:
+  # alpha: prior parameter 1
+  # beta: prior parameter 2
+  # data: observed data
+  #Outputs:
+  # pValue: Bayesian Posterior p-value
+  # distPlot: Histogram of the observed data and a density plot of
+  # the replicated data
+  
+  #Calculate the test quantity for the observed data
+  tObs <- max(data)
+  #vector to store the test quantities of the replicated data
+  tStat <- c(rep(NA, 1000))
+  n <- length(data)
+  #vector to store the replicated values for each simulation
+  x <- c(rep(NA, n))
+  xbar <- mean(data)
+  #compute the tstatistic 1000 times
+  for (j in 1:1000) {
+    #generate posterior predictive samples of size n
+    for(i in 1:n){
+      lambda <- rgamma(1, n + alpha, (n * xbar) + beta)
+      x[i] <- rexp(1, lambda)
+    }
+  #Calculate the test quantity for the replicated data
+  tStat[j] <- max(x)
+  }
+  #Calculate the pvalue and plot model fit against observed data
+  pValue <- length(which(tObs > tStat)) / 1000
+  distPlot <- hist(data, freq = FALSE, main = 
+    "Histogram of Replicated Data and \n Density of the Posterior Predictive Distribution")
+  distLines <- lines(density(x))
+  return(list(pValue = pValue, distPlot = distPlot, distLines = distLines))
+}
+
+#Results
+set.seed(160001695)
+maxPost(20, 100, c(rexp(100, 0.2)))
+set.seed(160001695)
+maxPost(2, 5, c(rexp(100, 0.2)))
+
+	Mean-Variance Test Quantity
+meanVarPost <- function(alpha, beta, data){
+  #Function to calculate the posterior predictive distribution
+  #Inputs:
+  # alpha: prior parameter 1
+  # beta: prior parameter 2
+  # data: observed data
+  #Outputs:
+  # pValue: Bayesian Posterior p-value
+  # distPlot: Histogram of the observed data and a density plot of
+  # the replicated data
+  
+  #Calculate test quantity for observed data
+  tObs <- mean(data) / var(data)
+  #Vector to store the test quantities of the replicated data
+  tStat <- c(rep(NA, 1000))
+  n <- length(data)
+  x <- c(rep(NA, n))
+  xbar <- mean(data)
+  #compute the tstatistic 1000 times
+  for (j in 1:1000) {
+    #generate posterior predictive samples of size 100
+    for(i in 1:n){
+      lambda <- rgamma(1, n + alpha, (n * xbar) + beta)
+      x[i] <- rexp(1, lambda)
+    }
+    tStat[j] <- mean(x) / var(x)
+  }
+  #Calculate the p-value and plot model fit against observations
+  pValue <- length(which(tStat > tObs)) / 1000
+  distPlot <- hist(data, freq = FALSE, main = 
+    "Histogram of Replicated Data and \n Density of the Posterior Predictive Distribution")
+  distLines <- lines(density(x))
+  return(list(pValue = pValue, distPlot = distPlot, distLines = distLines))
+}
+
+#Results
+set.seed(160001695)
+meanVarPost(2, 5, c(rexp(100, 0.2)))
+set.seed(160001695)
+meanVarPost(20, 100, c(rexp(100, 0.2)))
+
+	Bayesian Prior p-values
+	Maximum Test Quantity
+maxPrior <- function(alpha, beta, data){
+  #Function to calculate the posterior predictive distribution
+  #Inputs:
+  # alpha: prior parameter 1
+  # beta: prior parameter 2
+  # data: observed data
+  #Outputs:
+  # pValue: Bayesian Posterior p-value
+  # distPlot: Histogram of the observed data and a density plot of
+  # the replicated data
+  tObs <- max(data)
+  tStat <- c(rep(NA, 1000))
+  n <- length(data)
+  x <- c(rep(NA, n))
+  #compute the tstatistic 1000 times
+  for (j in 1:1000) {
+    #generate posterior predictive samples of size 100
+    for(i in 1:100){
+      lambda <- rgamma(1, alpha, beta)
+      x[i] <- rexp(1, lambda)
+    }
+    tStat[j] <- max(x)
+  }
+  pValue <- (length(which(tObs > tStat)) / 1000)
+  distPlot <- hist(data, freq = FALSE, main = "Histogram of Replicated Data and \n Density of the Prior Predictive Distribution")
+  distLines <- lines(density(x))
+  return(list(pvalue = pValue, distPlot = distPlot, distLines = distLines))
+}
+
+#Results
+set.seed(160001695)
+maxPrior(2, 5, c(rexp(100, 0.2)))
+set.seed(160001695)
+maxPrior(20, 100, c(rexp(100, 0.2)))
+
+	Mean-Variance Test Quantity
+meanVarPrior <- function(alpha, beta, data){
+  #Function to calculate the posterior predictive distribution
+  #Inputs:
+  # alpha: prior parameter 1
+  # beta: prior parameter 2
+  # data: observed data
+  #Outputs:
+  # pValue: Bayesian Posterior p-value
+  # distPlot: Histogram of the observed data and a density plot of
+  # the replicated data
+  
+  #Calculate test statistic for original data
+  tObs <- mean(data) / var(data)
+  #vector to store test statistic
+  tStat <- c(rep(NA, 1000))
+  n <- length(data)
+  x <- c(rep(NA, n))
+  #compute the tstatistic 1000 times
+  for (j in 1:1000) {
+    #generate posterior predictive samples of size 100
+    for(i in 1:n){
+      lambda <- rgamma(1, alpha, beta)
+      x[i] <- rexp(1, lambda)
+    }
+    tStat[j] <- mean(x) / var(x)
+  }
+  #Calculate the p-values and plot the original data against the replicate density
+  pValue <- length(which(tStat > tObs)) / 1000
+  distPlot <- hist(data, freq = FALSE, main = 
+    "Histogram of Replicated Data and \n Density of the Prior Predictive Distribution", 
+    ylim = c(0, 0.25))
+  distLines <- lines(density(x))
+  return(list(pValue = pValue, distPlot = distPlot, distLines = distLines))
+}
+
+#Results
+set.seed(160001695)
+meanVarPrior(2, 5, c(rexp(100, 0.2)))
+set.seed(160001695)
+meanVarPrior(20, 100, c(rexp(100, 0.2)))
+
+Appendix B – Speed of Light Gibbs Sampler Example
+(Gibbs sampling code adapted from Papathomas et al., 2019)
+set.seed(160001695)
+#Priors
+phi <- 25
+tau2 <- 2
+alpha <- 3
+beta <- 50
+
+#Test quantities for observed data
+tObs1 <- min(x)
+tObs2 <- max(x)
+tObs3 <- abs(quantile(x, probs = c(0.05)) - mean(x)) - abs(quantile(x, probs = c(0.95)) - mean(x))
+
+#Sample size of observed and replicated samples
+n <- 66
+#Speed of light data
+x <- c(28, 26, 33, 24, 34, -44, 27, 16, 40, -2, 29, 22, 24, 21, 25, 30, 23, 29, 
+       31, 19, 24, 20, 36, 32, 36, 28, 25, 21, 28, 29, 37, 25, 28, 26, 30, 32, 
+       36, 26, 30, 22, 36, 23, 27, 27, 28, 27, 31, 27, 26, 33, 26, 32, 32, 
+       24, 39, 28, 24, 25, 32, 25, 29, 27, 28, 29, 16, 23)
+#Plot the data
+hist(x, breaks = 40, main = "Speed of Light Data", xlab = "Speed of Light Measurement")
+#Mean of the data
+xbar <- mean(x)
+#Number of samples to take in the chain
+T <- 200000
+#Create space to store the Markov chain in 
+mu <- sigma2 <- numeric(T)
+#Set starting values
+mu[1] <- 20
+sigma2[1] <- 2
+
+	Posterior p-values
+#Run the Gibbs sampler 
+#Gibbs sampler code adapted from (Papathomas et al., 2019)
+for(t in 1:(T - 1)){
+  set.seed(i)
+  mu[t + 1]<-rnorm(1,(tau2 * n * xbar + sigma2[t] * phi)/(tau2 * n + sigma2[t]),
+            sqrt(sigma2[t] * tau2/(tau2 * n+sigma2[t])))
+  sigma2[t + 1]<-1/rgamma(1, shape= (n/2 + alpha),
+                          rate=(1/2 * sum((x - mu[t + 1])^2) + beta))
+}
+
+#Objects to store test quantities and replicated data
+Q1 <- numeric(1000)
+Q2 <- numeric(1000)
+Q3 <- numeric(1000)
+y <- numeric(66)
+#Simulate replicate samples and calculate test quantity for each sample
+for(k in 1:1000){
+  for(i in 1:66){
+    #Generate posterior predictive distribution by simulating replicates
+    #Remove first 1000 sampled parameter values as 'burn-in'
+    #ensure reproducibility
+    set.seed(((100) * k) + i)
+    y[i] <- rnorm(100, mu[((100 * k) - 100) + i + 1000], sqrt(sigma2[((100 * k) - 100) + i + 1000]))
+  }
+  #Calculate relevant test quantities
+  Q1[k] <- min(y)
+  Q2[k] <- max(y)
+  Q3[k] <- abs(quantile(y, probs = c(0.05)) - mean(y)) - abs(quantile(y, probs = c(0.95)) - mean(y))
+}
+
+#Produce trace plots for the parameters
+plot(1:T, mu, xlab = "Iteration", ylab = "mu", type = "l", main = "Trace Plot for the Mean of the Posterior Distribution")
+plot(1:T, sigma2, xlab = "Iteration", ylab = "sigma2", type = "l", main = "Trace Plot for the Variance of the Posterior Distribution")
+
+#Calculate the pvalue and plot model fit against observed data
+#1) Minimum Test Quantity
+pValue1 <- length(which(tObs1 > Q1)) / length(Q1)
+hist(Q1,main = "Histogram of Minimum Test Quantities for the \n Posterior Predictive Distribution and Observed Data", 
+                 xlim = c(tObs1 - 1, 20), breaks = 40)
+abline(v = tObs1, lwd = 2)
+#2) Maximum Test Quantity
+pValue2 <- length(which(tObs2 > Q2)) / length(Q2)
+hist(Q2,main = "Histogram of Maximum Test Quantities for the \n Posterior Predictive Distribution and Observed Data", 
+     xlim = c(35, 75), breaks = 40)
+abline(v = tObs2, lwd = 2)
+#3) Symmetry Test Quantity
+pValue3 <- length(which(tObs3 > Q3)) / length(Q3)
+hist(Q3,main = "Histogram of Symmetry Test Quantities for the \n Posterior Predictive Distribution and Observed Data", 
+     xlim = c(-10, 10), breaks = 40)
+abline(v = tObs3, lwd = 2)
+
+#Plot Observed Data against Bayesian Posterior Predictive Distribution
+posteriorPredMean = mean(mu)
+posteriorPredVariance = mean(sigma2)
+hist(x, breaks = 40, main = "Speed of Light Data and Posterior Predictive Distribution", xlab = "Speed of Light Measurement", freq = FALSE, xlim = c(-45, 60))
+lines(density(rnorm(100000, posteriorPredMean, sqrt(posteriorPredVariance))), lwd = 2)
+
+	Prior p-values
+#Create objects to store test quantities and simulated data
+Q1 <- numeric(1000)
+Q2 <- numeric(1000)
+Q3 <- numeric(1000)
+y <- numeric(66)
+
+#Priors
+phi <- 25
+tau2 <- 2
+alpha <- 3
+beta <- 50
+
+#Sample mu and sigma from prior distribution
+for(t in 1:(T - 1)){
+  mu[t + 1]<-rnorm(1, phi, tau2)
+  sigma2[t + 1]<-1 / rgamma(1, shape = alpha, rate = beta)
+}
+
+#Calculate prior predictive distribution
+for(k in 1:1000){
+    for(i in 1:66){
+      #Generate prior predictive distribution by simulating replicates
+      #Set the seed to ensure reproducibility
+      set.seed(((100) * k) + i)
+      y[i] <- rnorm(100, mu[((100 * k) - 100) + i], sqrt(sigma2[((100 * k) - 100) + i]))
+    }
+  #Calculate relevant test quantities for prior predictive distribution
+  Q1[k] <- min(y)
+  Q2[k] <- max(y)
+  Q3[k] <- abs(quantile(y, probs = c(0.05)) - mean(y)) - abs(quantile(y, probs = c(0.95)) - mean(y))
+}
+
+#Calculate the pvalue and plot model fit against observed data
+#1) Minimum Test Quantity
+pValue1 <- length(which(tObs1 > Q1)) / length(Q1)
+hist(Q1,main = "Histogram of Minimum Test Quantities for the \n Prior Predictive Distribution and Observed Data", 
+     xlim = c(tObs1 - 1, 20), breaks = 40)
+abline(v = tObs1, lwd = 2)
+#2) Maximum Test Quantity
+pValue2 <- length(which(tObs2 > Q2)) / length(Q2)
+hist(Q2,main = "Histogram of Maximum Test Quantities for the \n Prior Predictive Distribution and Observed Data", 
+     xlim = c(30, 75), breaks = 40)
+abline(v = tObs2, lwd = 2)
+#3) Symmetric Test Quantity
+pValue3 <- length(which(tObs3 > Q3)) / length(Q3)
+hist(Q3, main = "Histogram of Symmetry Test Quantities for the \n Prior Predictive Distribution and Observed Data", 
+     xlim = c(-5, 6), breaks = 40)
+abline(v = tObs3, lwd = 2)
+
+#Plot Observed Data against Bayesian Prior Predictive Distribution
+priorPredMean = mean(mu)
+priorPredVariance = mean(sigma2)
+hist(x, breaks = 40, main = "Speed of Light Data and Prior Predictive Distribution", xlab = "Speed of Light Measurement", freq = FALSE, xlim = c(-45, 60))
+lines(density(rnorm(100000, priorPredMean, sqrt(priorPredVariance))), lwd = 2)
+
+Appendix C – Speed of Light Data
+Simon Newcomb’s speed of light data (Gelman et al., 1995, pp 70).
+28, 26, 33, 24, 34, -44, 27, 16, 40, -2, 29, 22, 24, 21, 25, 30, 23, 29, 
+31, 19, 24, 20, 36, 32, 36, 28, 25, 21, 28, 29, 37, 25, 28, 26, 30, 32, 
+36, 26, 30, 22, 36, 23, 27, 27, 28, 27, 31, 27, 26, 33, 26, 32, 32, 
+24, 39, 28, 24, 25, 32, 25, 29, 27, 28, 29, 16, 23
